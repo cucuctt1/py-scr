@@ -19,10 +19,11 @@ class stack_buffer(ft.Stack):
             block.next_slot_x_contain = block.offset1
             block.next_slot_y_contain = block.top_part
             block.next_slot_y = block.top_part+block.bot_part+20
-            block.content = ft.Container(height=30, width=150, content=ft.Text(
-                "test" + str(block.next_slot_x_contain + block.left) + " " + str(block.next_slot_y_contain + block.top)),
-                                        bgcolor=ft.colors.GREEN)
-
+            block.block_height = block.top_part+block.bot_part + 20
             for code in block.contain:
                 block.next_slot_y_contain += code.block_height
                 block.next_slot_y +=code.block_height
+                block.block_height += code.block_height
+            print(block.block_height,block.id)
+            #block.update()
+            block.next_slot_y += block.next_slot_y_contain

@@ -49,7 +49,18 @@ class block(ft.GestureDetector):
             self.on_pan_start = self.startdrag
             self.on_pan_update = self.drag
             self.on_pan_end = self.enddrag
+            self.load_block()
 
+        def load_block(self):
+            if self.IsContainer:
+                print("loaded",self.id)
+                self.content = ft.Column([
+                    ft.Container(height=self.top_part,width=self.block_width,bgcolor=self.color,content=ft.Text("this is container")),
+                    ft.Container(height=20+self.next_slot_y_contain,width=self.offset1,bgcolor=self.color),
+                    ft.Container(height=self.bot_part,width=self.block_width,bgcolor=self.color)
+                ],spacing=0)
+            else:
+                self.content = ft.Container(height=30, width=150, content=ft.Text("test"), bgcolor=self.color)
 
         def drag(self,e:ft.DragUpdateEvent):
 
@@ -76,31 +87,73 @@ class block(ft.GestureDetector):
                 self.start_pos_list.append((code.left,code.top))
             if self.upper_code:
                 self.remove_self(mode=2)
+            #self.debug_level(0)
             self.code_container.slot_update()
+            print(self.below_code)
+        def debug_level(self,level):
+            print(level,self.below_code)
+            for contain in self.below_code:
+                for a in contain.contain:
+                    a.debug_level(level+1)
+            for a in self.contain:
+                a.debug_level(level+1)
+            print(level+1,self.contain)
+
 
         def enddrag(self,e:ft.DragEndEvent):
-            self.next_slot_update()
+            self.code_container.slot_update()
             filtered_block = filter(lambda block: block != self and block not in self.below_code and block not in self.contain,
                                     self.code_container.controls)
 
             for block in filtered_block:
+                status = self.stick_check(block)
                 if block.IsContainer:
-                    print(self.stick_check(block))
+                    if not block.upper_code:
+                        if status==1:
+                            block.add_to_below(self)
+                            break
+                        elif status == 2:
+                            block.add_to_contain(self)
+                            break
 
-            print(self.leave_check(self.start_pos_x,self.start_pos_y))
+                else:
+                    if status == 1:
+                        block.add_to_below(self)
+                        print(block.id)
+                        break
+            self.code_container.update()
+
+
             if self.upper_code:
                 if self.leave_check(self.start_pos_x,self.start_pos_y):
+                    print("leaved")
+
+                    self.remove_self()
+                    print(self.next_slot_y_contain)
+                    if self.IsContainer:
+                        self.content.controls[1] = ft.Container(height=20+self.next_slot_y_contain-30,width=self.offset1,bgcolor=self.color)
+                    self.code_container.slot_update()
                     self.upper_code = None
+                    pass
                 else:
                         #bouce back
                     del_x = e.control.left-self.start_pos_x
                     del_y = e.control.top-self.start_pos_y
                     self.move(-del_x,-del_y)
                     if self in self.upper_code.contain:
-                        self.upper_code.add_to_contain(self)
+                        for code in self.below_code:
+                            code.upper_code = self.upper_code
+                            self.upper_code.contain.append(code)
+                        self.below_code = []
+                        #self.upper_code.add_to_contain(self)
                     else:
-                        self.upper_code.add_to_below(self)
-
+                        for code in self.below_code:
+                            code.upper_code = self.upper_code
+                            self.upper_code.below_code.append(code)
+                        self.below_code = []
+            self.code_container.slot_update()
+            self.code_container.update()
+            self.update()
             pass
 
         #bouce back = place
@@ -139,6 +192,8 @@ class block(ft.GestureDetector):
             if target_element not in target_list:
                 target_list.append(target_element)
         def add_to_contain(self,block):
+            print("added to contain")
+            self.block_height += block.block_height
             self.add_to_list(self.contain,block)
             block.upper_code = self
             block.place(self.left+self.next_slot_x_contain,self.top+self.next_slot_y_contain)
@@ -148,8 +203,10 @@ class block(ft.GestureDetector):
                 self.add_to_list(self.contain,code)
                 block.place(self.left+self.next_slot_x_contain,self.top+self.next_slot_y_contain)
             block.below_code = []
+            print(self.contain)
 
         def add_to_below(self,block):
+            print("added to below")
             self.add_to_list(self.below_code,block)
             block.upper_code = self
             block.place(self.left,self.top+self.next_slot_y)
@@ -158,6 +215,7 @@ class block(ft.GestureDetector):
                 code.upper_code = self
                 self.add_to_list(self.below_code,code)
                 code.place(self.left,self.top+self.next_slot_y)
+            print(self.below_code)
             block.below_code = []
 
         def place(self,x,y):
@@ -172,18 +230,19 @@ class block(ft.GestureDetector):
             below_code = self.get_below()
             if self.upper_code:
                 if self in self.upper_code.contain:
-
-                    self.upper_code.contain.remove(self)
+                    if mode==1:
+                        self.upper_code.contain.remove(self)
                     for code in below_code:
                         self.upper_code.contain.remove(code)
                         code.upper_code = self
                         self.below_code.append(code)
                 else:
-
-                    self.upper_code.below_code.remove(self)
+                    if mode == 1:
+                        self.upper_code.below_code.remove(self)
                     for code in below_code:
                         self.upper_code.below_code.remove(code)
-                        code.upper_code = self
+                        if mode == 1:
+                            code.upper_code = self
                         self.below_code.append(code)
             if mode==1:
                 self.upper_code = None
@@ -192,23 +251,16 @@ class block(ft.GestureDetector):
             if self.upper_code:
                 if self in self.upper_code.contain:
                     index = self.upper_code.contain.index(self)
-                    return self.upper_code.contain[index+1:]
+                    print(self.upper_code.contain[index+1:])
+                    return list(self.upper_code.contain[index+1:])
                 else:
                     index = self.upper_code.below_code.index(self)
-                    return self.upper_code.below_code[index+1:]
+                    print(self.upper_code.below_code[index+1:])
+                    return list(self.upper_code.below_code[index+1:])
             else:
                 return self.below_code
         def next_slot_update(self):
-            self.next_slot_y = self.block_height
-            self.next_slot_x = 0
-            for code in self.below_code:
-                self.next_slot_y+=code.block_height
-            if self.IsContainer:
-                self.next_slot_x_contain = self.offset1
-                self.next_slot_y_contain = self.top_part+self.bot_part
-                self.content = ft.Container(height=30, width=150, content=ft.Text("test"+str(self.next_slot_x_contain+self.left)+" "+str(self.next_slot_y_contain+self.top)), bgcolor=ft.colors.GREEN)
+            self.code_container.slot_update()
 
-                for code in self.contain:
-                    self.next_slot_y_contain += code.block_height
 
 

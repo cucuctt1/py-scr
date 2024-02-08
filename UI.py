@@ -32,14 +32,14 @@ def main(page:ft.Page):
     # startblock.add(block6)
     # startblock.add(block7)
 
-    content = ft.Container(height=30,width=150,content=ft.Text("test"),bgcolor=ft.colors.AMBER)
-    block1 = b.block(iscontainer=True,x=30, y=0, color=ft.colors.AMBER, content=content, code_container=stack, id=2)
-    content = ft.Container(height=30, width=150, content=ft.Text("test"), bgcolor=ft.colors.RED)
-    block3 = b.block(x=190, y=190, color=ft.colors.AMBER, content=content, code_container=stack, id=3)
+    #content = ft.Container(height=30,width=150,content=ft.Text("test"),bgcolor=ft.colors.AMBER)
+    block1 = b.block(iscontainer=True,x=30, y=0, color=ft.colors.GREEN, content=None, code_container=stack, id=2)
+    #content = ft.Container(height=30, width=150, content=ft.Text("test"), bgcolor=ft.colors.RED)
+    block3 = b.block(x=190, y=190, color=ft.colors.AMBER, content=None, code_container=stack, id=3)
 
-    content = ft.Container(height=30, width=150, content=ft.Text("test"), bgcolor=ft.colors.GREEN)
+    #content = ft.Container(height=30, width=150, content=ft.Text("test"), bgcolor=ft.colors.GREEN)
 
-    block2 = b.block(isheader=True,x=30, y=30, color=ft.colors.AMBER, content=content, code_container=stack)
+    block2 = b.block(isheader=True,x=30, y=30, color=ft.colors.RED, content=None, code_container=stack)
     stack.add_block(block1)
     stack.add_block(block2)
     stack.add_block(block3)
