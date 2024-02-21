@@ -6,6 +6,10 @@ class stack_buffer(ft.Stack):
         self.controls = []
     def add_block(self,block):
         self.controls.append(block)
+    def update2(self):
+        self.slot_update()
+        self.block_form_update()
+        self.update()
 
     def slot_update(self):
         for block in self.controls:
@@ -24,6 +28,11 @@ class stack_buffer(ft.Stack):
                 block.next_slot_y_contain += code.block_height
                 block.next_slot_y +=code.block_height
                 block.block_height += code.block_height
-            print(block.block_height,block.id)
+
             #block.update()
-            block.next_slot_y += block.next_slot_y_contain
+            block.next_slot_y += block.next_slot_y_contain-30
+    def block_form_update(self):
+        for block in self.controls:
+            if block.IsContainer:
+                block.load_block()
+                pass

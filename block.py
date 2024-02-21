@@ -1,6 +1,6 @@
 import flet as ft
 import block_logic as bl
-
+import os
 
 
 
@@ -53,10 +53,9 @@ class block(ft.GestureDetector):
 
         def load_block(self):
             if self.IsContainer:
-                print("loaded",self.id)
                 self.content = ft.Column([
                     ft.Container(height=self.top_part,width=self.block_width,bgcolor=self.color,content=ft.Text("this is container")),
-                    ft.Container(height=20+self.next_slot_y_contain,width=self.offset1,bgcolor=self.color),
+                    ft.Container(height=20+self.next_slot_y_contain-30,width=self.offset1,bgcolor=self.color),
                     ft.Container(height=self.bot_part,width=self.block_width,bgcolor=self.color)
                 ],spacing=0)
             else:
@@ -71,8 +70,8 @@ class block(ft.GestureDetector):
 
             self.left +=delta_x
             self.top +=delta_y
-            if not self.upper_code:
-                for child_block in self.below_code:
+
+            for child_block in self.below_code:
                     child_block.move(delta_x,delta_y)
             if self.IsContainer:
                 for child_block in self.contain:
@@ -80,6 +79,7 @@ class block(ft.GestureDetector):
             self.code_container.update()
 
         def startdrag(self,e:ft.DragStartEvent):
+            self.temp = self.upper_code
             self.start_pos_x,self.start_pos_y = e.control.left,e.control.top
             below_code = self.get_below()
             self.start_pos_list = []
@@ -89,7 +89,8 @@ class block(ft.GestureDetector):
                 self.remove_self(mode=2)
             #self.debug_level(0)
             self.code_container.slot_update()
-            print(self.below_code)
+
+            os.system('cls')
         def debug_level(self,level):
             print(level,self.below_code)
             for contain in self.below_code:
@@ -111,25 +112,28 @@ class block(ft.GestureDetector):
                     if not block.upper_code:
                         if status==1:
                             block.add_to_below(self)
-                            break
+                            self.below_code = []
+
+                            return None
                         elif status == 2:
                             block.add_to_contain(self)
-                            break
+                            self.below_code = []
+                            return None
 
                 else:
                     if status == 1:
                         block.add_to_below(self)
-                        print(block.id)
-                        break
-            self.code_container.update()
+                        self.below_code = []
+
+                        return None
+            self.code_container.update2()
 
 
             if self.upper_code:
                 if self.leave_check(self.start_pos_x,self.start_pos_y):
-                    print("leaved")
 
                     self.remove_self()
-                    print(self.next_slot_y_contain)
+
                     if self.IsContainer:
                         self.content.controls[1] = ft.Container(height=20+self.next_slot_y_contain-30,width=self.offset1,bgcolor=self.color)
                     self.code_container.slot_update()
@@ -152,7 +156,7 @@ class block(ft.GestureDetector):
                             self.upper_code.below_code.append(code)
                         self.below_code = []
             self.code_container.slot_update()
-            self.code_container.update()
+            self.code_container.update2()
             self.update()
             pass
 
@@ -191,6 +195,8 @@ class block(ft.GestureDetector):
         def add_to_list(selft,target_list,target_element):
             if target_element not in target_list:
                 target_list.append(target_element)
+            else:
+                target_list.append(target_element)
         def add_to_contain(self,block):
             print("added to contain")
             self.block_height += block.block_height
@@ -216,7 +222,7 @@ class block(ft.GestureDetector):
                 self.add_to_list(self.below_code,code)
                 code.place(self.left,self.top+self.next_slot_y)
             print(self.below_code)
-            block.below_code = []
+            block.below_code.clear()
 
         def place(self,x,y):
             self.top = y
