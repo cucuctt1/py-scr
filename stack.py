@@ -4,6 +4,7 @@ class stack_buffer(ft.Stack):
     def __init__(self):
         super().__init__()
         self.controls = []
+
     def add_block(self,block):
         self.controls.append(block)
     def update2(self):

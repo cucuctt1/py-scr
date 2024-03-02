@@ -1,3 +1,6 @@
+
+# not longer use
+
 import flet as ft
 import os
 
@@ -91,11 +94,15 @@ class block(ft.GestureDetector):
         self.start_pos_list = [(code.left, code.top) for code in below_code]
         if self.upper_code:
             self.remove_self(mode=2)
+        if self.temp:
+            self.temp.place_fix()
         self.code_container.slot_update()
 
 
 
     def end_drag(self, e: ft.DragEndEvent):
+
+        temp_upper = self.upper_code
         self.code_container.slot_update()
         filtered_block = filter(lambda block: block != self and block not in self.below_code and block not in self.contain,
                                 self.code_container.controls)
@@ -155,7 +162,10 @@ class block(ft.GestureDetector):
                         self.upper_code.below_code.append(code)
                     self.below_code = []
         self.code_container.slot_update()
-
+        print(temp_upper)
+        print(self.below_code)
+        if temp_upper:
+            temp_upper.place_fix()
         self.place_fix()
         self.code_container.update2()
 
@@ -271,10 +281,12 @@ class block(ft.GestureDetector):
 
     #call to the upper code
     def place_fix(self):
+
         if self.upper_code:
             self.upper_code.next_slot_y_contain = self.upper_code.top_part
             for code in self.upper_code.contain:
                 code.place(self.upper_code.left+self.upper_code.offset1,self.upper_code.next_slot_y_contain+self.upper_code.top)
                 self.upper_code.next_slot_y_contain+=code.block_height
             self.upper_code.place_fix()
+        self.code_container.slot_update()
 
