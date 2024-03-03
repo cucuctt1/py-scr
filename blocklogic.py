@@ -101,7 +101,7 @@ class block(ft.GestureDetector):
                 row_buffer.append(text_block)
             else:
                 content_text_field = ft.TextField(width=para_wid,text_size=15,dense=False,bgcolor=ft.colors.WHITE,cursor_height=para_hei-3,content_padding=ft.padding.only(top=-4,left=3,right=3),on_change=self.on_change)
-                para_block = ft.Container(bgcolor="",width=para_wid,height=para_hei,content=content_text_field)
+                para_block = ft.Container(bgcolor=ft.colors.RED,width=para_wid,height=para_hei,content=content_text_field)
                 row_buffer.append(para_block)
         return list(row_buffer)
 
@@ -146,8 +146,9 @@ class block(ft.GestureDetector):
                 para_array[n].left = change_x
                 para_array[n].top = self.get_center(para_array[n])
                 change_x += text_wid+spacing
-
             else:
+                print(para_array)
+                print("row",row)
                 block_wid = para_array[n].width
                 para_array[n].left = change_x
                 para_array[n].top = self.get_center(para_array[n])
@@ -178,7 +179,6 @@ class block(ft.GestureDetector):
         self.para_data = self.load_para(self.data)
         self.posion_manage(self.data,self.para_data)
         self.arg_buffer = [item for item in self.para_data if isinstance(item,ft.Container)]
-
         self.block_width = max(self.block_width,self.get_row_wid(self.para_data))
         display = ft.Stack()
         display.controls.extend(self.para_data)
@@ -234,6 +234,8 @@ class block(ft.GestureDetector):
 
     def start_drag(self,e:ft.DragStartEvent):
         self.move_ontop()
+        print(self.upper_code.id)
+        print(self.upper_code.parameter_buffer)
         # print("block_height",self.block_height,"block_width",self.block_width)
         self.temp_upper = self.upper_code
         self.start_pos_x,self.start_pos_y = e.control.left,e.control.top
@@ -291,12 +293,7 @@ class block(ft.GestureDetector):
     def end_drag(self,e : ft.DragEndEvent):
         for item in self.code_container.controls:
             stick_status = self.stick_check(item)
-            if item.HaveParameter and not self.below_code and not self.IsContainer:
-                for n,para_slot in enumerate(item.arg_buffer):
-                    stick_status_para = self.stick_check(item,para=para_slot)
-                    if stick_status_para == 3:
-                        item.add_to_para(self,n)
-                        return
+
             if item.IsContainer:
                 if item.upper_code:
                     if stick_status == 2:
@@ -326,6 +323,12 @@ class block(ft.GestureDetector):
                     if stick_status == 4:
                         item.add_to_sideblock(self)
                         self.code_container.update()
+            if item.HaveParameter and not self.below_code and not self.IsContainer:
+                for n,para_slot in enumerate(item.arg_buffer):
+                    stick_status_para = self.stick_check(item,para=para_slot)
+                    if stick_status_para == 3:
+                        item.add_to_para(self,n)
+                        return
 
     def get_next_slot_contain(self):
         result = 0
@@ -353,10 +356,11 @@ class block(ft.GestureDetector):
         else:
             x_axis_check_contain = False
             y_axis_check_contain = False
+
         have_parameter_check = target.HaveParameter
         if have_parameter_check and para:
             x_axis_check_para = -5 <= self.left -(para.left+target.left) < 25
-            y_axis_check_para = -3 <= self.top - (para.top+target.top) < 18
+            y_axis_check_para = -3 <= self.top - (para.top+target.top) < 15
 
         else:
             x_axis_check_para = False
@@ -364,7 +368,7 @@ class block(ft.GestureDetector):
 
         hook_check = not self.hook
         if hook_check and not target.side_block:
-            x_axis_check_sideblock = -5 <= self.left -(target.left+target.block_width) < 25
+            x_axis_check_sideblock = -5 <= self.left -(target.left+target.block_width) < 15
             y_axis_check_sideblock = -3 <= self.top - (target.top) < 18
         else:
             x_axis_check_sideblock = False
@@ -386,12 +390,13 @@ class block(ft.GestureDetector):
         self.size_manage()
         self.place_block()
     def add_to_para(self,target,slot):
-        if not self.parameter_buffer[slot]:
+        if not self.parameter_buffer[slot] and target != self:
             target.upper_code = self
-            self.parameter_buffer[slot] = target
             self.arg_buffer[slot].content.value = ""
+            self.parameter_buffer[slot] = target
             self.set_size_para(target, slot)
             self.size_manage()
+            self.change_wid(150, self.arg_buffer[slot])
             self.place_block()
     def content_update(self):
         if self.IsContainer:
@@ -422,10 +427,13 @@ class block(ft.GestureDetector):
 
     def get_max_height(self):
         max_hei = 30
-        for item in self.parameter_buffer:
-            if item:
+
+        for n,item in enumerate(self.parameter_buffer):
+            if item != None and item!=self:
                 max_hei = max(max_hei, item.get_max_height())
-                max_hei = max(max_hei,item.block_height)
+                max_hei = max(max_hei, item.block_height)
+            elif item == self:
+                self.parameter_buffer[n] = None
         return max_hei
     def get_max_width(self):
         wid = self.para_data[-1].left+self.para_data[-1].width+10
@@ -439,14 +447,14 @@ class block(ft.GestureDetector):
                 self.Npara += 1
                 self.struct[0].append(("para", None))
                 self.parameter_buffer.append(None)
-                print(self.parameter_buffer)
-                self.data = self.struct[0]
+
                 content_text_field = ft.TextField(width=para_wid, text_size=15, dense=False, bgcolor=ft.colors.WHITE,
                                                   cursor_height=para_hei - 3,
                                                   content_padding=ft.padding.only(top=-4, left=3, right=3),
                                                   on_change=self.on_change)
                 para_block = ft.Container(bgcolor="", width=para_wid, height=para_hei, content=content_text_field)
                 self.para_data.append(para_block)
+                self.data = self.struct[0]
                 self.arg_buffer.append(para_block)
                 self.content.content.controls.append(para_block)
             elif self.Npara>1 and (not self.arg_buffer[-2].content.value and not self.parameter_buffer[-2]):
@@ -470,6 +478,7 @@ class block(ft.GestureDetector):
                     self.height = self.block_height
         self.args_manage()
         self.posion_manage(self.data, self.para_data)
+
         temp = self.get_max_width()
 
         self.block_width = max(self.block_width,temp)
@@ -563,6 +572,7 @@ class block(ft.GestureDetector):
                     para.left = self.arg_buffer[index].left + self.left+1
                     para.place_block()
                     self.code_container.update()
+            self.posion_manage(self.data,self.para_data)
         if self.side_block:
 
             self.side_block.top = self.top
