@@ -1,0 +1,9 @@
+{
+    "style": [["text","["],["para",null],["text","]"]],
+    "color":"#FF6A00",
+    "text color":"#000000",
+    "block type":"variable",
+    "block name":"array index",
+    "block setting":["side"],
+    "struct":[["bracket","["],["arg",null],["bracket","]"]]
+}
