@@ -1,4 +1,4 @@
-
+from copy import copy
 print_struct = [
     [("text","print"),("para",None)],
     ("code","print"),
