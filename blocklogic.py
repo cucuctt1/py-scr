@@ -20,7 +20,7 @@ class block(ft.GestureDetector):
                  id=1, x=None, y=None, color=None, content=None, code_container=None,
                  block_height=30, block_width=150, name=None, below_code=[], upper_code=None, contain=[],Npara=0,struct = None
                  ,args = False,preview = False,scale = 1,
-                 text_color = ft.colors.BLACK,page = None,clone_para= False,clone_restrict = 0):
+                 text_color = ft.colors.BLACK,page = None,clone_para= False,clone_restrict = 0,indisplay = False):
         super().__init__(self)
         self.scale = scale
         self.text_color = text_color
@@ -45,9 +45,12 @@ class block(ft.GestureDetector):
         self.page = page
         self.page2 = page#over purpose
         self.expand = True
+        self.in_display = indisplay
 
         self.block_height = block_height*self.scale
         self.block_width = block_width*self.scale
+        self.width = self.block_width
+        self.height = self.block_height
 
         self.below_code = list(below_code)
         self.upper_code = upper_code
@@ -68,14 +71,19 @@ class block(ft.GestureDetector):
         self.sideblock_offset = 30
         self.hook = None
         self.side_block = None
-
+        self.on_enter = self.hover
+        self.on_exit = self.leave
         #code parser
          #string data
-        self.template = struct
-        self.name = name
-        self.load_template()
 
+        self.template = struct
+        self.name = "dsd"#name
+        self.load_template()
+        self.hook_to_mouse = False
         self.load_block()
+
+        self.hide_content = False
+        self.content_hide = None
 
 
     def __deepcopy__(self, memo):
@@ -104,7 +112,8 @@ class block(ft.GestureDetector):
             text_color=self.text_color,
             page=self.page,
             clone_para=self.clone_para,
-            clone_restrict=self.clone_restrict
+            clone_restrict=self.clone_restrict,
+            indisplay=self.in_display
         )
 
         if hasattr(self, 'template'):
@@ -112,6 +121,16 @@ class block(ft.GestureDetector):
         memo[id(self)] = new_instance
 
         return new_instance
+
+    def hover(self,e):
+        if not self.hook_to_mouse and self.in_display:
+            self.stack_interact(e=e,mode=1)
+            self.hook_to_mouse = True
+
+    def leave(self,e):
+        if self.hook_to_mouse and self.in_display:
+            self.stack_interact(e=e,mode=2)
+            self.hook_to_mouse = False
     def load_template(self):
 
         if not self.IsHeader:
@@ -135,7 +154,7 @@ class block(ft.GestureDetector):
         packed_data = (self.Npara,para_data,self.template)
         return packed_data
     def get_click(self,e):
-        print(self.block_name)
+
         if self.block_name == "def":
             pi.get_signal_block(self.struct_create(),type="func",target=self)
         elif self.block_name == "for":
@@ -161,6 +180,7 @@ class block(ft.GestureDetector):
         row_buffer = []
         for item in element_array:
             block_type, data = item
+
             if block_type=="text":
                 text_block = ft.Text(size=text_size, value=text_data, width=text_wid, height=20,color=self.text_color)
                 text_block.value = data
@@ -302,12 +322,15 @@ class block(ft.GestureDetector):
                     code.move_ontop()
         if self.side_block:
             self.side_block.move_ontop()
-    def stack_interact(self,e):
+    def stack_interact(self,e,mode=1):
         if self.code_container:
-            self.code_container.interact(data=self,e=e)
+            self.code_container.interact(data=self,e=e,mode=mode)
     def start_drag(self,e:ft.DragStartEvent):
+        self.hook_to_mouse = False
+        self.in_display = False
+        self.showcontent()
         if not self.preview:
-            self.stack_interact(e=e)
+
             self.move_ontop()
             if self.upper_code and self not in self.upper_code.parameter_buffer:
                 below_code = self.get_below()
@@ -759,3 +782,19 @@ class block(ft.GestureDetector):
             self.add_to_para(new_block,n)
 
         self.content_update()
+
+    def hidecontent(self):
+        if not self.hide_content:
+            self.content_hide = self.content
+            self.content = None
+            self.hide_content = True
+        return self.content_hide
+
+
+    def showcontent(self):
+
+        if self.hide_content:
+
+            self.content = self.content_hide
+            self.content_hide = None
+            self.hide_content = False
