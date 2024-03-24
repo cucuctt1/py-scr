@@ -13,6 +13,7 @@ assign_dir = dir+"normal_block/assign.json"
 def_dir = dir+"define/def.json"
 for_dir = dir+"container/for.json"
 if_dir = dir+"container/if.json"
+class_dir = dir+"class/class.json"
 def generate_random_string(length):
     characters = string.ascii_letters
     random_string = ''.join(random.choice(characters) for _ in range(length))
@@ -60,7 +61,20 @@ def add_for(stack):
     stack.update()
 def add_if(stack):
     data = b.block(x=130, y=65, color=ft.colors.TEAL, content=None, code_container=stack, id="level 2 block",
-                   have_parameter=True, Npara=2, struct=jsrd.read_json(if_dir),iscontainer=True)
+                   have_parameter=True, Npara=1, struct=jsrd.read_json(if_dir),iscontainer=True)
     stack.controls.append(data)
     del data
     stack.update()
+
+def add_class(stack):
+    data = b.block(x=130, y=65, color=ft.colors.TEAL, content=None, code_container=stack,
+                   have_parameter=True, Npara=1, struct=jsrd.read_json(class_dir),iscontainer=True)
+    stack.controls.append(data)
+    del data
+    stack.update()
+
+
+
+
+
+

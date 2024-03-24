@@ -1,15 +1,11 @@
-import flet as ft
-#start block
-START_BLOCK_HEIGHT = 30
-START_BLOCK_COLOR = ft.colors.AMBER
+custom_block_dir = "CF_store/"
+dirs = "../default_block/"
+roll_back_len = 30
 
-
-#code block
-CODE_BLOCK_HEIGHT = 30
-CODE_BLOCK_COLOR = ft.colors.RED
-
-
-
-#container block
-CONTAINER_BLOCK_HEIGHT = 80 #defaulf
-CONTAINER_BLOCK_COLOR = ft.colors.GREEN
+class_i = 0
+condition_i = 1
+container_i = 2
+define_i = 3
+normal_i = 4
+python_i = 5
+misc_i = 6

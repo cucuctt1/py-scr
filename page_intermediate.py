@@ -1,7 +1,7 @@
-import blocklogic as b
-import UI
-import function_ui.function_ui as fu
+from function_UI import func_display as fd
+import function_UI.function_ui as fu
 import container.for_edit as fe
+from class_func import class_UI as cUI
 import flet as ft
 
 page:ft.Page = None
@@ -11,7 +11,8 @@ global_data = None
 def set_page(page_data):
     global page,restriction_area
     page = page_data
-    restriction_area = ft.Container(width=page.width,height=page.height,bgcolor="BLACK",opacity=0.5)
+    restriction_area = ft.Container(width=2000,height=2000,bgcolor="BLACK",opacity=0.5)
+
 def func_sig():
     pass
 def for_sig():
@@ -19,7 +20,7 @@ def for_sig():
 def load_data(data,target:fu.function_UI):
     target.load_data(data)
 
-def get_signal_block(data,type = "func",target=None):
+def get_signal_block(data,type = "func",target=None,e=None):
 
     global edit_target,global_data
 
@@ -30,10 +31,20 @@ def get_signal_block(data,type = "func",target=None):
         function_ui = fu.function_UI(page.width)
         load_data(data,target=function_ui)
         open_window(function_ui)
-    else:
+    elif type == "for":
         for_ui = fe.function_UI(page.width)
         load_data(data,target=for_ui)
         open_window(for_ui)
+    elif type == "class":
+        _,_,template = global_data
+        cordx = e.global_x
+        cordy = e.global_y
+        class_editor = cUI.class_edit(200,90,page=page,parent=edit_target,top=cordy,left=cordx)
+        class_editor.open(template['style'][1][1])
+
+        page.overlay.append(restriction_area)
+        page.overlay.append(class_editor)
+        pass
     page.update()
 def open_window(target:ft.Container):
 
@@ -61,17 +72,17 @@ def send_signal_block(data,type="func"):
     if type=='func':
         code_name,func_name,para_data = data
         npara = len(para_data)
-
         temp,main_data = ori_block_struct['struct'][0]
-        style_data = ori_block_struct['style']
-
+        style_data = [('text', 'def'), ('text', ''), ('btn', None)]
+        #print(style_data)
         main_data = "def "+code_name
         ori_block_struct['struct'][0] = (temp,main_data)
         style_data[1] = ('text',func_name)
-        for i in range(npara-ori_npara):
+        for i in range(npara+1):
             style_data.insert(-1,('para', None))
         ori_npara = npara
         new_para_data = []
+        ori_block_struct['style'] = style_data
         for n,p_data in enumerate(para_data):
             para_name,para_dval = p_data
             arg = {'style': [('text', '')],
@@ -85,7 +96,7 @@ def send_signal_block(data,type="func"):
             new_para_data.append(arg)
         repacked_data = ori_npara,new_para_data,ori_block_struct
         edit_target.read_data(repacked_data)
-    else:
+    elif type=="for":
         ori_npara = len(data)+1
         new_para_data = []
         ori_block_struct['style'] = [('text', 'for'), ('text', 'in'), ('para', None), ('btn', None)]
@@ -107,7 +118,18 @@ def send_signal_block(data,type="func"):
             ori_block_struct['struct'].insert(1, ('arg', None))
 
         repacked_data = ori_npara,new_para_data,ori_block_struct
-        print(new_para_data)
-        print(ori_block_struct)
         edit_target.read_data(repacked_data)
+    elif type == "class":
+        edit_target.template = data
+
+        edit_target.load_template()
+        #edit_target.load_block()
+        edit_target.reset_para_size()
+        edit_target.class_update()
+        edit_target.class_name_update()
+        # try:
+        #     edit_target.content_update()
+        # except:
+        #     pass
+        # pass
     pass

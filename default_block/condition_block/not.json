@@ -1,9 +1,9 @@
 {
-    "style":[["text","and"],["para",null]],
+    "style":[["text","not"],["para",null]],
     "color":"#4CFF00",
     "text color":"#000000",
     "block type":"condition",
-    "block_name":"not",
+    "block name":"not",
     "block setting":[],
     "struct":[["code","not"],["adsb"," "],["arg",null]]
 }

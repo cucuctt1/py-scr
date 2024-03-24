@@ -1,16 +1,18 @@
 #new block test
-import copy
-import time
 
 import flet as ft
 import copy as c
 import page_intermediate as pi
+import utility.color_process
 from utility.string_process import *
-
-
+from function_UI import create_func as cf
+from function_UI import local_CF_buffer as lCFb
+import global_control as gc
+from class_func import class_scan as csc
+import random_req as rq
 def text_tranform(text):
     if isinstance(text,str):
-        return '"'+text+'"'
+        return text
     else:
         return text
 
@@ -18,12 +20,14 @@ class block(ft.GestureDetector):
     def __init__(self, iscontainer=False, have_parameter=False,
                  isheader=False, executable=False,
                  id=1, x=None, y=None, color=None, content=None, code_container=None,
-                 block_height=30, block_width=150, name=None, below_code=[], upper_code=None, contain=[],Npara=0,struct = None
+                 block_height=30, block_width=150, name="", below_code=[], upper_code=None, contain=[],Npara=0,struct = None
                  ,args = False,preview = False,scale = 1,
                  text_color = ft.colors.BLACK,page = None,clone_para= False,clone_restrict = 0,indisplay = False):
         super().__init__(self)
         self.scale = scale
+
         self.text_color = text_color
+        self.border_color = "#000000"
         self.IsContainer = iscontainer
         self.HaveParameter = have_parameter
         self.IsHeader = isheader
@@ -34,8 +38,7 @@ class block(ft.GestureDetector):
         else:
             self.Npara = 0
         self.clone_para = clone_para
-        self.clone_restrict = clone_restrict
-        print(clone_restrict)# from right to left
+        self.clone_restrict = clone_restrict# from right to left
         self.id = id
         self.top = y
         self.left = x
@@ -57,6 +60,8 @@ class block(ft.GestureDetector):
         self.contain = list(contain)
         self.parameter_buffer = [None]*(self.Npara)
         self.args = args
+        self.func_buffer = []
+        self.class_id = None
 
         self.offset_height = 20*self.scale
         self.offset1 = 20*self.scale
@@ -77,13 +82,14 @@ class block(ft.GestureDetector):
          #string data
 
         self.template = struct
-        self.name = "dsd"#name
+        self.name = name#name
         self.load_template()
         self.hook_to_mouse = False
         self.load_block()
 
         self.hide_content = False
         self.content_hide = None
+        self.reset_para_size()
 
 
     def __deepcopy__(self, memo):
@@ -101,9 +107,9 @@ class block(ft.GestureDetector):
             block_height=self.block_height,
             block_width=self.block_width,
             name=self.name,
-            below_code=copy.deepcopy(self.below_code, memo),
+            below_code=c.deepcopy(self.below_code, memo),
             upper_code=self.upper_code,
-            contain=copy.deepcopy(self.contain, memo),
+            contain=c.deepcopy(self.contain, memo),
             Npara=self.Npara,
             struct=self.template,
             args=self.args,
@@ -117,7 +123,7 @@ class block(ft.GestureDetector):
         )
 
         if hasattr(self, 'template'):
-            new_instance.template = copy.deepcopy(self.template, memo)
+            new_instance.template = c.deepcopy(self.template, memo)
         memo[id(self)] = new_instance
 
         return new_instance
@@ -132,10 +138,9 @@ class block(ft.GestureDetector):
             self.stack_interact(e=e,mode=2)
             self.hook_to_mouse = False
     def load_template(self):
-
-        if not self.IsHeader:
             self.style = self.template["style"]
             self.color = self.template["color"]
+            self.border_color = utility.color_process.border_color(self.color)
             self.text_color = self.template["text color"]
             self.block_type = self.template["block type"]
             self.block_name = self.template["block name"]
@@ -143,6 +148,9 @@ class block(ft.GestureDetector):
             self.struct = self.template["struct"]
             if self.block_type == "variable":
                 self.style[0] = ("text",self.name)
+            if self.block_type == "container" or self.block_type == "class":
+                self.IsContainer = True
+
 
     def struct_create(self):
         para_data = []
@@ -159,6 +167,8 @@ class block(ft.GestureDetector):
             pi.get_signal_block(self.struct_create(),type="func",target=self)
         elif self.block_name == "for":
             pi.get_signal_block(self.struct_create(), type="for", target=self)
+        elif self.block_name == "class":
+            pi.get_signal_block(self.struct_create(), type="class", target=self,e=e)
     def load_para(self,element_array):#->data
 
         spacing = 10*self.scale
@@ -206,14 +216,17 @@ class block(ft.GestureDetector):
                 except:
                     pass
                 self.change_wid(data_len,item)
-
                 break
     def change_wid(self,wid,slot):
 
         slot.width = max(30,wid)
         self.size_manage()
         self.reset_para_size()
-        self.code_container.update()
+        self.content_update()
+        try:
+            self.code_container.update()
+        except:
+            pass
         pass
     def get_row_wid(self,row):
         res = 0
@@ -305,9 +318,12 @@ class block(ft.GestureDetector):
         self.place_block()
         self.content_update()
 
-    def move_to_end(self,target):#end of code container list
-        self.code_container.controls.remove(target)
-        self.code_container.controls.append(target)
+    def move_to_end(self,target):
+        try:#end of code container list
+            self.code_container.controls.remove(target)
+            self.code_container.controls.append(target)
+        except:
+            pass
 
     def move_ontop(self):
         self.move_to_end(self)
@@ -326,11 +342,12 @@ class block(ft.GestureDetector):
         if self.code_container:
             self.code_container.interact(data=self,e=e,mode=mode)
     def start_drag(self,e:ft.DragStartEvent):
+        self.showcontent()
+        self.hide_content = False
         self.hook_to_mouse = False
         self.in_display = False
-        self.showcontent()
-        if not self.preview:
 
+        if not self.preview:
             self.move_ontop()
             if self.upper_code and self not in self.upper_code.parameter_buffer:
                 below_code = self.get_below()
@@ -338,6 +355,9 @@ class block(ft.GestureDetector):
                 if self.upper_code:
                     if self in self.upper_code.contain:
                         self.upper_code.contain.remove(self)
+                        if self.upper_code.block_name == "class":
+                            #fix later
+                            self.upper_code.class_update()
                         self.upper_code.contain = [item for item in self.upper_code.contain if item not in below_code]
                     else:
                         self.upper_code.below_code.remove(self)
@@ -359,12 +379,13 @@ class block(ft.GestureDetector):
                 else:
                     new_copy = c.deepcopy(self)
                     index = self.upper_code.parameter_buffer.index(self)
-                    self.upper_code.reset_para_size()
+
                     self.code_container.controls.append(new_copy)
-                    self.code_container.update()
+                    #self.code_container.update()
                     self.upper_code.parameter_buffer[index] = new_copy
+                    #self.upper_code.reset_para_size()
                     self.upper_code = None
-                    self.code_container.update()
+                    #self.code_container.update()
 
             elif self.hook:
                 temp = self.hook.side_block
@@ -372,30 +393,43 @@ class block(ft.GestureDetector):
                 temp.reset_para_size()
                 self.hook = None
                 self.code_container.update()
-
-    def drag(self, e: ft.DragUpdateEvent):
-        if not self.preview:
-            self.move(delta_x=e.delta_x, delta_y=e.delta_y)
+        if self.upper_code:
+            self.upper_code.reset_height()
             self.code_container.update()
 
-    def move(self, delta_x, delta_y):
+    def drag(self, e: ft.DragUpdateEvent):
+        if not self.preview or not self.in_display:
+            self.move(delta_x=e.delta_x, delta_y=e.delta_y,bedrag=True)
+            self.code_container.update()
+
+    def move(self, delta_x, delta_y,bedrag = False):
         self.left += delta_x
         self.top += delta_y
 
+        if ((self.top >=1400 or self.top < 40) or (self.left >= 2000 or self.left < 300)) and not bedrag:
+            self.visible = False
+        else:
+            self.visible = True
+
         for child_block in self.below_code:
-            child_block.move(delta_x, delta_y)
+            child_block.move(delta_x, delta_y,bedrag)
         if self.IsContainer:
             for child_block in self.contain:
-                child_block.move(delta_x, delta_y)
+                child_block.move(delta_x, delta_y,bedrag)
         if self.HaveParameter:
             for child_block in self.parameter_buffer:
                 if child_block:
-                    child_block.move(delta_x,delta_y)
+                    child_block.move(delta_x,delta_y,bedrag)
         if self.side_block:
-            self.side_block.move(delta_x,delta_y)
+            self.side_block.move(delta_x,delta_y,bedrag)
 
     def end_drag(self,e : ft.DragEndEvent):
-
+        self.code_container.interact(data=None,e=None,mode=2)
+        if self.template and not self.block_setting:
+            try:
+                self.block_setting.append(rq.generate_random_string(10))
+            except:
+                pass
         if not self.preview:
             for item in self.code_container.controls:
                 stick_status = self.stick_check(item)
@@ -404,6 +438,8 @@ class block(ft.GestureDetector):
                     if item.upper_code:
                         if stick_status == 2:
                             item.add_to_contain(self)
+                            if self.upper_code and self.upper_code.block_name == "class":
+                                csc.scan_check(self.upper_code, self)
                             self.reset_height()
                             self.code_container.update()
                             return
@@ -415,6 +451,8 @@ class block(ft.GestureDetector):
                             return
                         if stick_status == 2:
                             item.add_to_contain(self)
+                            if self.upper_code and self.upper_code.block_name == "class":
+                                csc.scan_check(self.upper_code, self)
                             self.reset_height()
                             self.code_container.update()
                             return
@@ -434,9 +472,13 @@ class block(ft.GestureDetector):
                     for n,para_slot in enumerate(item.arg_buffer):
                         stick_status_para = self.stick_check(item,para=para_slot)
                         if stick_status_para == 3:
+                            print("Add to para")
                             item.add_to_para(self,n)
                             return
-        self.limit_check()
+        self.limit_check(300-self.block_width*0.5)
+        if self.upper_code and self.upper_code.block_name == "class":
+            csc.scan_check(self.upper_code,self)
+        #gc.globals_rbb.add_content(c.deepcopy(self.code_container.controls))
 
     def get_next_slot_contain(self):
         result = 0
@@ -448,13 +490,14 @@ class block(ft.GestureDetector):
         for item in self.below_code:
             result+=item.block_height
         return result
-    def limit_check(self):
-        if self.left < -20:
+    def limit_check(self,limit = 260):
+        if self.left < limit and not self.IsHeader:
             self.self_destroy()
 
     def self_destroy(self):
         self.code_container.controls.remove(self)
-
+        if self.block_name == "class":
+            gc.remove_class(self)
         for item in self.below_code:
             item.self_destroy()
         if self.side_block:
@@ -462,6 +505,8 @@ class block(ft.GestureDetector):
         for item in self.parameter_buffer:
             if item:
                 item.self_destroy()
+        for item in self.contain:
+            item.self_destroy()
         self.code_container.update()
         del self
     def stick_check(self,target,para = None) -> int: # return status
@@ -513,15 +558,24 @@ class block(ft.GestureDetector):
         self.size_manage()
         self.place_block()
     def add_to_para(self,target,slot):
-        if not self.parameter_buffer[slot] and target != self:
-            target.upper_code = self
-            self.arg_buffer[slot].content.value = ""
-            self.parameter_buffer[slot] = target
-            self.set_size_para(target, slot)
-            self.size_manage()
-            #self.change_wid(150*self.scale, self.arg_buffer[slot])
-            self.place_block()
+        #this make me stupid af
+
+        try:
+            if not self.parameter_buffer[slot] and target != self:
+                target.upper_code = self
+                self.arg_buffer[slot].content.value = ""
+                self.parameter_buffer[slot] = target
+                self.set_size_para(target, slot)
+                self.size_manage()
+
+                self.place_block()
+                self.code_container.update()
+        except:
+
+            pass
+
     def content_update(self):
+        #print("addd")
         if self.IsContainer:
             display = ft.Stack()
             display.controls.extend(self.para_data)
@@ -587,14 +641,13 @@ class block(ft.GestureDetector):
                 self.arg_buffer.pop()
                 self.content.content.controls.pop()
 
-        #
 
     def size_manage(self):
         for item in self.parameter_buffer:
             if item:
                 if self.IsContainer:
                     self.top_part = self.get_max_height()+10
-                    #self.reset_height()
+                    self.reset_height()
                 else:
                     self.block_height = self.get_max_height()+10
                     self.height = self.block_height
@@ -608,19 +661,22 @@ class block(ft.GestureDetector):
             self.upper_code.set_size_para(self, self.upper_code.parameter_buffer.index(self))
             self.upper_code.size_manage()
             self.upper_code.place_block()
+
+
         self.reset_height()
         self.place_block()
         self.content_update()
 
     def reset_para_size(self):
         for n,item in enumerate(self.parameter_buffer):
-            if not item and not isinstance(self.arg_buffer[n].content,ft.Icon) :
+            if not item and not isinstance(self.arg_buffer[n].content,ft.Icon):
                 if not self.arg_buffer[n].content.value:
                     self.arg_buffer[n].width = 30
                     self.arg_buffer[n].height = 20
         if self.IsContainer:
             self.top_part = self.get_max_height()
             self.reset_height()
+
         else:
             self.height = self.get_max_height()
             self.block_height = self.height
@@ -641,7 +697,7 @@ class block(ft.GestureDetector):
             self.hook.reset_para_size()
         self.reset_height()
         self.size_manage()
-        #self.content_update()
+        self.content_update()
         pass
 
     def add_to_contain(self,target):
@@ -653,10 +709,10 @@ class block(ft.GestureDetector):
             self.contain.append(target_below_code)
             self.offset_height+=target.block_height
         target.below_code = []
-        self.block_height = self.reset_height() #replace with function
-
+        self.reset_height() #replace with function
         self.content_update()
         self.place_block()
+        self.class_update()
 
     def add_to_below(self,target):
         self.below_code.append(target)
@@ -693,14 +749,12 @@ class block(ft.GestureDetector):
                     para.top = self.arg_buffer[index].top+self.top
                     para.left = self.arg_buffer[index].left + self.left
                     para.place_block()
-                    self.code_container.update()
-            self.posion_manage(self.data,self.para_data)
+
+                    self.posion_manage(self.data,self.para_data)
         if self.side_block:
             self.side_block.top = self.top
             self.side_block.left = self.left+self.block_width+1
             self.side_block.place_block()
-
-
 
     def code_parser(self,level=1):
         parsed_code = ""
@@ -734,7 +788,7 @@ class block(ft.GestureDetector):
                         parsed_code += value
                     else:
                         value = self.arg_buffer[n_para].content.value
-                        parsed_code += str(text_tranform(check_type(value)))
+                        parsed_code += str(check_type(value))
                     n_para+=1
                 pass
             elif kw == "adsb":
@@ -746,7 +800,6 @@ class block(ft.GestureDetector):
             elif kw == "name":
                 parsed_code+=self.name
             elif kw == "def_val" and data:
-                print(check_type(data))
                 if self.upper_code and self.upper_code.IsContainer:
                     parsed_code += " = "+str(check_type(data))
             else:
@@ -760,6 +813,7 @@ class block(ft.GestureDetector):
     def read_data(self,data):
         #unpack
         npara,para_data,self_data = data
+
         self.Npara = npara
         self.template = self_data
         self.load_template()
@@ -771,16 +825,26 @@ class block(ft.GestureDetector):
         for item in self.parameter_buffer:
             if item and item in self.code_container.controls:
                 self.code_container.controls.remove(item)
-
         self.parameter_buffer = [None]*npara
-
         for n,item in enumerate(para_data):
-            new_block = block(x=0, y=0, color=ft.colors.GREEN, content=None, code_container=self.code_container, id="level 1 block",
-                            struct=item)
+            if item['block type'] == 'variable':
+                name = item['style'][0][1]
+            else:
+                name = ""
+
+            new_block = block(x=0, y=0, code_container=self.code_container,
+                            struct=item,name=name)
             self.code_container.controls.append(new_block)
 
             self.add_to_para(new_block,n)
+        cf.get_data(self.template,self) #don't ask why
+        if self.block_setting:
+            lCFb.add_to_buffer(self.template,self.block_setting[0])
 
+        if self.upper_code and self.upper_code.block_name == "class":
+            gc.update_class(self.upper_code)
+        self.size_manage()
+        self.reset_para_size()
         self.content_update()
 
     def hidecontent(self):
@@ -790,7 +854,6 @@ class block(ft.GestureDetector):
             self.hide_content = True
         return self.content_hide
 
-
     def showcontent(self):
 
         if self.hide_content:
@@ -798,3 +861,34 @@ class block(ft.GestureDetector):
             self.content = self.content_hide
             self.content_hide = None
             self.hide_content = False
+
+    def class_update(self):
+        try:
+            if self.block_name == 'class':
+                if not self.class_id:
+                    self.class_id = rq.generate_random_string(10)
+                    #create class in class manage
+
+                if not self.func_buffer:
+                    self.func_buffer = []
+
+                remove_list = []
+                for item in self.func_buffer:
+                    if item not in self.contain:
+                        self.func_buffer.remove(item)
+                        remove_list.append(item)
+
+
+                for item in self.contain:
+                    if item.block_name == "def" and item not in self.func_buffer:
+                        self.func_buffer.append(item)
+
+                if self.name:
+                    gc.update_class(self,remove_list)
+                    pass
+        except:
+            pass
+
+    def class_name_update(self):
+        gc.update_class_name(self)
+        #print(self.func_buffer)

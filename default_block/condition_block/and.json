@@ -3,7 +3,7 @@
     "color":"#4CFF00",
     "text color":"#000000",
     "block type":"condition",
-    "block_name":"and",
+    "block name":"and",
     "block setting":[],
-    "struct":[["arg",null],["adsb"," "],["code","and"],["adsb"," "],["arg",null]]
+    "struct":[["bracket","("],["arg",null],["adsb"," "],["code","and"],["adsb"," "],["arg",null],["bracket",")"]]
 }
